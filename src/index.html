@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Courses List</title>
+  <style>
+    table {
+      width: 70%;
+      border-collapse: collapse;
+      margin: 5rem auto;
+    }
+
+    th,
+    td {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f4f4f4;
+    }
+
+    form {
+      width: 500px;
+      margin: 2rem auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    input,
+    button {
+      padding: 8px;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Courses List</h1>
+
+  <!-- Add/Update Course Form -->
+  <form id="add-course-form">
+    <input type="hidden" id="course-id">
+    <input type="text" id="title" name="title" placeholder="Title" required>
+    <input type="text" id="author" name="author" placeholder="Author" required>
+    <textarea id="body" name="body" placeholder="Body" required></textarea>
+    <div>
+      <input type="checkbox" id="hidden" name="hidden"> Hidden
+    </div>
+    <button type="submit">Save Course</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Author</th>
+        <th>Body</th>
+        <th>Created At</th>
+        <th>Hidden</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="courses-table-body">
+      <!-- Data will be inserted here by JavaScript -->
+    </tbody>
+  </table>
+
+  <script>
+    async function fetchCourses() {
+      try {
+        const response = await fetch('http://localhost:8000/course');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const courses = await response.json();
+        const tableBody = document.getElementById('courses-table-body');
+        tableBody.innerHTML = ''; // Clear existing rows
+        courses.forEach(course => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${course.title}</td>
+            <td>${course.author}</td>
+            <td>${course.body}</td>
+            <td>${new Date(course.createAt).toDateString()}</td>
+            <td>${course.hidden ? 'Yes' : 'No'}</td>
+            <td><button onclick="deleteCourse('${course._id}')">Delete</button></td>
+          `;
+          row.addEventListener('click', () => populateForm(course));
+          tableBody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+      }
+    }
+
+    function populateForm(course) {
+      document.getElementById('course-id').value = course._id;
+      document.getElementById('title').value = course.title;
+      document.getElementById('author').value = course.author;
+      document.getElementById('body').value = course.body;
+      document.getElementById('hidden').checked = course.hidden;
+    }
+
+    async function addOrUpdateCourse(event) {
+      event.preventDefault();
+      const courseId = document.getElementById('course-id').value;
+      const title = document.getElementById('title').value;
+      const author = document.getElementById('author').value;
+      const body = document.getElementById('body').value;
+      const hidden = document.getElementById('hidden').checked;
+
+      const courseData = {
+        title,
+        author,
+        body,
+        hidden,
+        createAt: new Date().toISOString()
+      };
+
+      try {
+        let response;
+        if (courseId) {
+          // Update existing course
+          response = await fetch(`http://localhost:8000/course/${courseId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(courseData)
+          });
+        } else {
+          // Add new course
+          response = await fetch('http://localhost:8000/course', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(courseData)
+          });
+        }
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        // Refresh the course list
+        fetchCourses();
+
+        // Clear the form
+        document.getElementById('add-course-form').reset();
+        document.getElementById('course-id').value = '';
+      } catch (error) {
+        console.error('Error adding/updating course:', error);
+      }
+    }
+
+    async function deleteCourse(courseId) {
+      try {
+        const response = await fetch(`http://localhost:8000/course/${courseId}`, {
+          method: 'DELETE'
+        });
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        // Remove the course from the table
+        fetchCourses();
+      } catch (error) {
+        console.error('Error deleting course:', error);
+      }
+    }
+
+    // Fetch courses when the page loads
+    window.onload = fetchCourses;
+
+    // Add event listener to the form
+    document.getElementById('add-course-form').addEventListener('submit', addOrUpdateCourse);
+  </script>
+</body>
+
+</html>

@@ -1,13 +1,14 @@
+
 class NewsController {
   // [GET] /news
-  index(req, res) {
-    res.send('news url');
+  async index(req, res) {
+    res.send('[GET] /news');
   }
 
   // [GET] /news/:slug
-  show(req, res) {
-    res.send('News Detail');
+  async show(req, res) {
+    res.send('[GET] /news/:slug');
   }
 }
 
-module.exports = new NewsController;
+module.exports = new NewsController();
